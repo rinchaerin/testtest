@@ -1,0 +1,55 @@
+import requests, bs4
+import pandas as pd
+from lxml import html
+from urllib.request import Request, urlopen
+from urllib.parse import urlencode, quote_plus, unquote
+
+# 1. URL 파라미터 분리
+# SERVICE URL
+xmlUrl = 'https://www.ntis.go.kr/rndopen/openApi/public_project?'
+
+# 사용자 인증키
+My_API_Key = unquote('apprvKey=DEV_TEST_APPRV_KEY=005ixt14h5kh322em031&query=%EB%82%98%EB%85%B8&userId=&collection=project&searchField=&displayCount=1&startPosition=1&naviCount=30&sortby=&boostquery=&addQuery=')   
+
+# get 방식으로 쿼리를 분리하기 위해 '?', 메타코드 아님.
+queryParams = '?' + urlencode(    
+    {
+        quote_plus('aprrvKey') : My_API_Key,    # 승인키
+        quote_plus('collection') : 'project',          #검색 컬랙션명
+        quote_plus('SRWR') : '나노&searchField=BI'         #검색어
+     }
+)
+
+response = requests.get(xmlUrl + queryParams).text.encode('utf-8')
+xmlobj = bs4.BeautifulSoup(response, 'lxml-xml')
+
+rows = xmlobj.findAll('Science Class')
+# rows    # 디버깅용.
+columns = rows[0].find_all()
+# columns    # 디버깅용.
+# columns[0].name    # 디버깅용.
+# columns[0].text    # 디버깅용.
+
+# 모든 행과 열의 값을 모아 매트릭스로 만들어보자.
+rowList = []
+nameList = []
+columnList = []
+
+rowsLen = len(rows)
+for i in range(0, rowsLen):
+    columns = rows[i].find_all()
+    
+    columnsLen = len(columns)
+    for j in range(0, columnsLen):
+        # 첫 번째 행 데이터 값 수집 시에만 컬럼 값을 저장한다. 
+ 
+        if i == 0:
+            nameList.append(columns[j].name)
+        eachColumn = columns[j].text
+        columnList.append(eachColumn)
+    rowList.append(columnList)
+    columnList = []    
+
+    
+result = pd.DataFrame(rowList, columns=nameList)
+result.head()
